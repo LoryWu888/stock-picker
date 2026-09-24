@@ -28,12 +28,28 @@ jobs:
           python -m pip install --upgrade pip
           pip install akshare pandas numpy requests jinja2
 
-      - name: Run stock picker
-        run: python3 stock_picker.py
+      - name: Run stock picker (with retry)
+        run: |
+          retry_command() {
+              n=1
+              max=3
+              until [ "$n" -ge $max ]
+              do
+                 echo "Running python3 stock_picker.py (attempt $n of $max)..."
+                 python3 stock_picker.py && break
+                 n=$((n+1))
+                 echo "Script failed. Retrying in 30 seconds..."
+                 sleep 30
+              done
+              if [ $n -ge $max ]; then
+                 echo "Command failed after $max attempts."
+                 exit 1
+              fi
+          }
+          retry_command
 
       - name: Move report to root
         run: |
-          # 检查报告在哪里生成，统一放到根目录
           if [ -f _site/index.html ]; then
             mv _site/index.html index.html
           fi
@@ -41,7 +57,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'  # 部署当前根目录的内容
+          path: '.' 
 
   deploy:
     environment:
