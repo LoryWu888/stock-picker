@@ -2,12 +2,14 @@ name: Stock Picker
 
 on:
   schedule:
-    # 每天北京时间 15:10 运行 (UTC时间 07:10)
-    - cron: '10 7 * * 1-5' # 周一至周五
-  workflow_dispatch: # 允许手动点击运行
+    # 每天北京时间 15:10 运行 (周一到周五)
+    - cron: '10 7 * * 1-5'
+  workflow_dispatch: # 允许手动点击运行测试
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   run-picker:
@@ -15,22 +17,32 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install akshare pandas numpy requests jinja2
+
       - name: Run stock picker
         run: python3 stock_picker.py
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
+
+      - name: Move report to root
+        run: |
+          # 检查报告在哪里生成，统一放到根目录
+          if [ -f _site/index.html ]; then
+            mv _site/index.html index.html
+          fi
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '_site'
+          path: '.'  # 部署当前根目录的内容
+
   deploy:
     environment:
       name: github-pages
